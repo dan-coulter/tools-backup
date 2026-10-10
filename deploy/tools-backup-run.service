@@ -1,0 +1,13 @@
+# /etc/systemd/system/tools-backup-run.service — one backup run (started by the timer)
+[Unit]
+Description=Tools backup: back up everything to S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=dan
+Group=dan
+WorkingDirectory=/home/dan/claude/tools-backup
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/npm run -s backup -- --trigger schedule
