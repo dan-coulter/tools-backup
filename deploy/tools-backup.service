@@ -1,0 +1,23 @@
+# /etc/systemd/system/tools-backup.service — the web UI on :4760
+[Unit]
+Description=Tools backup (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Runs as you: it has to read every tool's files, wherever they live.
+User=dan
+Group=dan
+WorkingDirectory=/home/dan/claude/tools-backup
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# Bind every interface (LAN and Tailscale). Next reads HOSTNAME, which shells
+# set to the machine name, so set it explicitly.
+Environment=HOSTNAME=0.0.0.0
+ExecStart=/usr/local/bin/npm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

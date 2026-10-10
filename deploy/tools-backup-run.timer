@@ -1,0 +1,12 @@
+# /etc/systemd/system/tools-backup-run.timer
+[Unit]
+Description=Daily tools backup
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=10m
+# Catch up after the machine was off at 04:30.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

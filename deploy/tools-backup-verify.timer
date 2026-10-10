@@ -1,0 +1,10 @@
+# /etc/systemd/system/tools-backup-verify.timer
+[Unit]
+Description=Weekly tools backup restore test
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

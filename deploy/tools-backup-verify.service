@@ -1,0 +1,13 @@
+# /etc/systemd/system/tools-backup-verify.service — test restores
+[Unit]
+Description=Tools backup: test-restore the newest copy of everything from S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=dan
+Group=dan
+WorkingDirectory=/home/dan/claude/tools-backup
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/npm run -s items -- verify
