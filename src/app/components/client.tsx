@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { Download, Eye, Trash2, X } from "lucide-react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { type ActionState, addItemAction, removeItem, startBackup, toggleItem, verify } from "../actions";
 
 export function AutoRefresh({ active }: { active: boolean }) {
@@ -56,8 +57,26 @@ export function BackupButton({
   );
 }
 
-export function ItemActions({ id, enabled, removable, busy }: { id: number; enabled: boolean; removable: boolean; busy: boolean }) {
+export function ItemActions({
+  id,
+  label,
+  enabled,
+  removable,
+  busy,
+  previewable,
+  hasCopy,
+}: {
+  id: number;
+  label: string;
+  enabled: boolean;
+  removable: boolean;
+  busy: boolean;
+  previewable: boolean;
+  hasCopy: boolean;
+}) {
   const { pending, msg, run } = useAction();
+  const [previewing, setPreviewing] = useState(false);
+  const noCopy = "Nothing backed up yet";
   return (
     <div className="item-actions">
       <BackupButton itemId={id} disabled={busy}>
@@ -69,17 +88,101 @@ export function ItemActions({ id, enabled, removable, busy }: { id: number; enab
       <button disabled={pending} onClick={() => run(() => toggleItem(id, !enabled))}>
         {enabled ? "Disable" : "Enable"}
       </button>
+      {previewable && (
+        <button
+          className="icon"
+          onClick={() => setPreviewing(true)}
+          title="View the current file"
+          aria-label={`View ${label}`}
+        >
+          <Eye size={16} />
+        </button>
+      )}
+      {hasCopy ? (
+        <a
+          className="button icon"
+          href={`/api/items/${id}/download`}
+          download
+          title="Download the newest backed-up copy"
+          aria-label={`Download ${label}`}
+        >
+          <Download size={16} />
+        </a>
+      ) : (
+        <button className="icon" disabled title={noCopy} aria-label={`Download ${label}`}>
+          <Download size={16} />
+        </button>
+      )}
       {removable && (
         <button
-          className="danger"
+          className="icon danger"
           disabled={pending}
-          onClick={() => confirm("Stop backing this up? Copies already in S3 are kept.") && run(() => removeItem(id))}
+          title="Stop backing this up"
+          aria-label={`Remove ${label}`}
+          onClick={() => confirm(`Stop backing up ${label}? Copies already in S3 are kept.`) && run(() => removeItem(id))}
         >
-          Remove
+          <Trash2 size={16} />
         </button>
       )}
       <Message msg={msg} />
+      {previewing && <Preview id={id} label={label} hasCopy={hasCopy} onClose={() => setPreviewing(false)} />}
     </div>
+  );
+}
+
+type PreviewData = { path: string; modifiedAt: string; text: string; truncated: boolean } | { error: string };
+
+function Preview({ id, label, hasCopy, onClose }: { id: number; label: string; hasCopy: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [data, setData] = useState<PreviewData | null>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+    fetch(`/api/items/${id}/preview`)
+      .then((r) => r.json())
+      .then(setData, (e: Error) => setData({ error: e.message }));
+  }, [id]);
+  return (
+    <dialog
+      ref={ref}
+      className="preview"
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && ref.current.close()}
+    >
+      <div className="preview-head">
+        <div>
+          <strong>{label}</strong>
+          {data && "path" in data && (
+            <div className="sub">
+              {data.path} · current file, changed {new Date(data.modifiedAt).toLocaleString()}
+            </div>
+          )}
+        </div>
+        {hasCopy && (
+          <a
+            className="button icon"
+            href={`/api/items/${id}/download`}
+            download
+            title="Download the newest backed-up copy"
+            aria-label={`Download ${label}`}
+          >
+            <Download size={16} />
+          </a>
+        )}
+        <button className="icon" onClick={() => ref.current?.close()} title="Close" aria-label="Close">
+          <X size={16} />
+        </button>
+      </div>
+      {!data ? (
+        <p className="sub">Loading…</p>
+      ) : "error" in data ? (
+        <p className="err">{data.error}</p>
+      ) : (
+        <>
+          <pre>{data.text}</pre>
+          {data.truncated && <p className="sub">Showing the first 512 KB.</p>}
+        </>
+      )}
+    </dialog>
   );
 }
 

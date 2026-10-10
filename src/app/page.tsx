@@ -87,7 +87,15 @@ async function Row({ item, last, lastGood, busy }: { item: Item; last?: Backup; 
         )}
       </td>
       <td>
-        <ItemActions id={item.id} enabled={!!item.enabled} removable={item.tool !== SELF_TOOL} busy={busy} />
+        <ItemActions
+          id={item.id}
+          label={item.label}
+          enabled={!!item.enabled}
+          removable={item.tool !== SELF_TOOL}
+          busy={busy}
+          previewable={item.fetcher === "file"}
+          hasCopy={!!uploaded}
+        />
       </td>
     </tr>
   );
