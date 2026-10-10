@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import zlib from "node:zlib";
+import type { Readable } from "node:stream";
 import {
+  type Backup,
   type Item,
   finishRun,
   getItem,
@@ -16,7 +18,7 @@ import {
   startRun,
 } from "./db";
 import { getFetcher } from "./fetchers";
-import { download, s3Uri, upload } from "./s3";
+import { getStream, s3Uri, upload } from "./s3";
 
 export type ItemResult = { item: Item; status: "success" | "unchanged" | "failed"; detail: string };
 
@@ -88,6 +90,8 @@ async function backupItem(item: Item, runId: number, workRoot: string): Promise<
     sha256: null as string | null,
     source_mtime: null as string | null,
     error: null as string | null,
+    filename: null as string | null,
+    compressed: 0,
   };
   try {
     const fetcher = getFetcher(item.fetcher);
@@ -105,20 +109,22 @@ async function backupItem(item: Item, runId: number, workRoot: string): Promise<
         bytes: prev.bytes,
         sha256,
         source_mtime: sourceMtime,
+        filename: prev.filename,
+        compressed: prev.compressed,
       });
       return { item, status: "unchanged", detail: `same as ${prev.s3_key}` };
     }
 
     let file = snap.file;
-    let filename = snap.filename;
+    let uploadName = snap.filename;
     if (snap.compress) {
       file = `${snap.file}.gz`;
-      filename = `${snap.filename}.gz`;
+      uploadName = `${snap.filename}.gz`;
       await pipeline(fs.createReadStream(snap.file), zlib.createGzip({ level: 9 }), fs.createWriteStream(file));
     }
     const bytes = (await fsp.stat(file)).size;
     const stamp = startedAt.toISOString().replace(/:/g, "-").replace(/\.\d+Z$/, "Z");
-    const key = `${item.tool}/${slug(item.label)}/${stamp}__${filename}`;
+    const key = `${item.tool}/${slug(item.label)}/${stamp}__${uploadName}`;
     await upload(key, file, sha256);
     recordBackup({
       ...base,
@@ -128,6 +134,8 @@ async function backupItem(item: Item, runId: number, workRoot: string): Promise<
       bytes,
       sha256,
       source_mtime: sourceMtime,
+      filename: snap.filename,
+      compressed: snap.compress ? 1 : 0,
     });
     return { item, status: "success", detail: `${s3Uri(key)} (${bytes} bytes)` };
   } catch (e) {
@@ -137,24 +145,30 @@ async function backupItem(item: Item, runId: number, workRoot: string): Promise<
   }
 }
 
-// Downloads the newest uploaded copy of an item to `dest` (a directory),
-// un-gzipping it. Returns the path of the restored file.
+// Streams the newest uploaded copy of an item from S3, un-gzipped, as it was
+// on disk. Used by download, preview and restore.
+export async function openLatest(itemId: number): Promise<{ backup: Backup; filename: string; body: Readable }> {
+  const backup = lastUploaded(itemId);
+  if (!backup?.s3_key) throw new Error("No uploaded backup for this item yet");
+  const raw = await getStream(backup.s3_key);
+  // Rows written before migration 2 (or by an older build) have no filename;
+  // for those, a .gz key means we compressed it.
+  const compressed = backup.filename == null ? backup.s3_key.endsWith(".gz") : !!backup.compressed;
+  const body = compressed ? raw.pipe(zlib.createGunzip()) : raw;
+  raw.on("error", (e) => body.destroy(e));
+  const filename =
+    backup.filename ?? path.basename(backup.s3_key).replace(/^[^_]+__/, "").replace(compressed ? /\.gz$/ : /$^/, "");
+  return { backup, filename, body };
+}
+
+// Downloads the newest uploaded copy of an item into `destDir`. Returns the
+// path of the restored file.
 export async function restoreLatest(itemId: number, destDir: string): Promise<{ file: string; key: string }> {
-  const prev = lastUploaded(itemId);
-  if (!prev?.s3_key) throw new Error("No uploaded backup for this item yet");
+  const { backup, filename, body } = await openLatest(itemId);
   await fsp.mkdir(destDir, { recursive: true });
-  const name = path.basename(prev.s3_key).replace(/^[^_]+__/, "");
-  const downloaded = path.join(destDir, name);
-  await download(prev.s3_key, downloaded);
-  // We gzip on upload unless the source already was compressed, in which case
-  // the checksum (always of the uncompressed snapshot) matches as-is.
-  if (!name.endsWith(".gz") || (await sha256File(downloaded)) === prev.sha256) {
-    return { file: downloaded, key: prev.s3_key };
-  }
-  const file = downloaded.slice(0, -3);
-  await pipeline(fs.createReadStream(downloaded), zlib.createGunzip(), fs.createWriteStream(file));
-  await fsp.rm(downloaded);
-  return { file, key: prev.s3_key };
+  const file = path.join(destDir, filename);
+  await pipeline(body, fs.createWriteStream(file));
+  return { file, key: backup.s3_key! };
 }
 
 // A test restore: fetch the newest copy from S3, confirm its checksum and, for

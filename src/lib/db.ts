@@ -38,6 +38,8 @@ export type Backup = {
   error: string | null;
   verified_at: string | null;
   verify_detail: string | null;
+  filename: string | null;
+  compressed: number;
 };
 
 export type Run = {
@@ -95,6 +97,14 @@ const MIGRATIONS = [
     verify_detail TEXT
   );
   CREATE INDEX backups_item ON backups(item_id, started_at DESC);
+  `,
+  // What was uploaded: the snapshot's own filename and whether we gzipped it.
+  `
+  ALTER TABLE backups ADD COLUMN filename TEXT;
+  ALTER TABLE backups ADD COLUMN compressed INTEGER NOT NULL DEFAULT 0;
+  UPDATE backups SET compressed = (s3_key LIKE '%.gz'),
+    filename = substr(s3_key, instr(s3_key, '__') + 2) WHERE s3_key IS NOT NULL;
+  UPDATE backups SET filename = substr(filename, 1, length(filename) - 3) WHERE compressed = 1;
   `,
 ];
 
@@ -274,8 +284,8 @@ export function recordVerification(backupId: number, detail: string) {
 export function recordBackup(b: Omit<Backup, "id" | "verified_at" | "verify_detail">) {
   getDb()
     .prepare(
-      `INSERT INTO backups (run_id, item_id, started_at, finished_at, status, s3_key, bytes, sha256, source_mtime, error)
-       VALUES (@run_id, @item_id, @started_at, @finished_at, @status, @s3_key, @bytes, @sha256, @source_mtime, @error)`,
+      `INSERT INTO backups (run_id, item_id, started_at, finished_at, status, s3_key, bytes, sha256, source_mtime, error, filename, compressed)
+       VALUES (@run_id, @item_id, @started_at, @finished_at, @status, @s3_key, @bytes, @sha256, @source_mtime, @error, @filename, @compressed)`,
     )
     .run(b);
 }

@@ -44,7 +44,7 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 
 th.c-dot { width: 22px; }
 th.c-type { width: 130px; }
 th.c-when { width: 230px; }
-th.c-actions { width: 340px; }
+th.c-actions { width: 400px; }
 th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
 td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 tr:last-child td { border-bottom: 0; }
@@ -62,11 +62,12 @@ td:first-child { width: 14px; padding-right: 0; }
 .dot.bad { background: var(--bad); }
 .runs td { padding: 6px 8px; }
 .runs .dot { margin: 0 4px 0 0; }
-button {
+button, a.button {
   font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--border); background: var(--panel); color: var(--text);
 }
-button:hover:not(:disabled) { border-color: var(--accent); }
+a.button { display: inline-flex; text-decoration: none; }
+button:hover:not(:disabled), a.button:hover { border-color: var(--accent); }
 button:disabled { opacity: 0.55; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); }
@@ -88,3 +89,14 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
 @media (max-width: 700px) {
   .add-form .wide { grid-column: auto; }
 }
+button.icon, a.button.icon { padding: 5px 7px; line-height: 0; color: var(--muted); align-items: center; }
+button.icon:hover:not(:disabled), a.button.icon:hover { color: var(--text); }
+dialog.preview {
+  width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+}
+dialog.preview::backdrop { background: rgb(0 0 0 / 0.5); }
+.preview-head { display: flex; gap: 6px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }
+.preview-head > div { flex: 1; }
+dialog.preview pre, dialog.preview p { margin: 0; padding: 12px 16px; }
+dialog.preview pre { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; white-space: pre-wrap; word-break: break-all; }

@@ -5,7 +5,8 @@ Backs up the databases and config/env files of the tools on plex.local to
 
 - Web UI: http://plex.local:4760. It lists every file per tool, when it was last
   backed up, its last restore test, and has buttons to back up, verify, add and
-  remove files.
+  remove files. Plain files can be previewed as they are on disk now; every file
+  can be downloaded as its newest backed-up copy (un-gzipped).
 - Daily run at 04:30 (systemd timer) and a weekly restore test on Sundays.
 - Its own SQLite database (`data/tools-backup.db`) is always the first thing
   backed up.

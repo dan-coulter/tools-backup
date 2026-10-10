@@ -1,7 +1,6 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import fs from "node:fs";
-import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
 
 let client: S3Client | null = null;
@@ -30,9 +29,9 @@ export async function upload(key: string, file: string, sha256: string) {
   }).done();
 }
 
-export async function download(key: string, dest: string) {
+export async function getStream(key: string): Promise<Readable> {
   const res = await s3().send(new GetObjectCommand({ Bucket: bucket(), Key: key }));
-  await pipeline(res.Body as Readable, fs.createWriteStream(dest));
+  return res.Body as Readable;
 }
 
 export function s3Uri(key: string) {
