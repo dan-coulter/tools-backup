@@ -43,10 +43,10 @@ async function Row({ item, last, lastGood, busy }: { item: Item; last?: Backup; 
   const uploaded = lastUploaded(item.id);
   return (
     <tr className={item.enabled ? undefined : "disabled"}>
-      <td>
+      <td className="c-dot">
         <span className={`dot ${state}`} />
       </td>
-      <td>
+      <td className="c-file">
         <div className="label">{item.label}</div>
         <div className="path" title={item.path}>
           {item.path}
@@ -63,8 +63,8 @@ async function Row({ item, last, lastGood, busy }: { item: Item; last?: Backup; 
           )}
         </div>
       </td>
-      <td className="type">{getFetcher(item.fetcher).label}</td>
-      <td>
+      <td className="c-type type">{getFetcher(item.fetcher).label}</td>
+      <td className="c-when">
         <div>
           <When iso={lastGood?.started_at} />
         </div>
@@ -86,7 +86,7 @@ async function Row({ item, last, lastGood, busy }: { item: Item; last?: Backup; 
           </div>
         )}
       </td>
-      <td>
+      <td className="c-actions">
         <ItemActions
           id={item.id}
           label={item.label}
@@ -137,12 +137,12 @@ export default async function Home() {
         <section key={tool} className="tool">
           <div className="tool-head">
             <h2>{tool}</h2>
-            <code className="sub">s3://…/{tool}/</code>
+            <code className="sub tool-path">s3://…/{tool}/</code>
             <BackupButton tool={tool} disabled={busy}>
               Back up {tool}
             </BackupButton>
           </div>
-          <table>
+          <table className="items">
             <thead>
               <tr>
                 <th className="c-dot" />
