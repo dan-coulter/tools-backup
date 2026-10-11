@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import Database from "better-sqlite3";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { cleanup, tempDir, writeFile } from "@/test/helpers";
+import { cleanup, fakeDocker, tempDir, writeFile } from "@/test/helpers";
 import { detectFetcher, FETCHERS, getFetcher } from "..";
+import { dockerDirFetcher, isContainerPath, parseContainerPath, parseExcludes } from "../docker-dir";
 import { fileFetcher } from "../file";
 import { latestInDirFetcher } from "../latest-in-dir";
 import { sqliteFetcher } from "../sqlite";
@@ -32,11 +34,15 @@ describe("getFetcher", () => {
   });
 
   it("names the known fetchers when the id is wrong", () => {
-    expect(() => getFetcher("ssh")).toThrow('Unknown fetcher "ssh". Known: sqlite, file, latest-in-dir');
+    expect(() => getFetcher("ssh")).toThrow('Unknown fetcher "ssh". Known: sqlite, file, latest-in-dir, docker-dir');
   });
 });
 
 describe("detectFetcher", () => {
+  it("uses docker-dir for container:/path, without touching the disk", async () => {
+    expect(await detectFetcher("jenkins:/var/jenkins_home")).toBe("docker-dir");
+  });
+
   it("uses latest-in-dir for folders", async () => {
     expect(await detectFetcher(src)).toBe("latest-in-dir");
   });
@@ -125,6 +131,82 @@ describe("latest-in-dir fetcher", () => {
   it("names the newest file when inspecting", async () => {
     writeFile(src, "a.zip", "a", new Date("2026-10-01"));
     expect(await latestInDirFetcher.inspect(src, { pattern: "*.zip" })).toMatchObject({ ok: true, detail: "newest: a.zip" });
+  });
+});
+
+describe("docker-dir fetcher", () => {
+  let bin: string;
+  beforeEach(() => {
+    bin = tempDir();
+    fakeDocker(bin);
+  });
+  afterEach(() => {
+    delete process.env.DOCKER_BIN;
+    cleanup(bin);
+  });
+
+  it("parses container paths and exclude lists", () => {
+    expect(parseContainerPath("jenkins:/var/jenkins_home")).toEqual({
+      container: "jenkins",
+      dir: "/var/jenkins_home",
+    });
+    expect(isContainerPath("/home/dan/.env")).toBe(false);
+    expect(isContainerPath("jenkins:relative")).toBe(false);
+    expect(() => parseContainerPath("/var/jenkins_home")).toThrow("Expected <container>:/path");
+    expect(parseExcludes("plugins, war\njobs/*/builds ,")).toEqual(["plugins", "war", "jobs/*/builds"]);
+    expect(parseExcludes(undefined)).toEqual([]);
+  });
+
+  it("tars the folder, leaving out excluded paths", async () => {
+    writeFile(src, "config.xml", "<hudson/>");
+    writeFile(src, "jobs/deploy/config.xml", "<project/>");
+    writeFile(src, "jobs/deploy/builds/1/log", "build output");
+    writeFile(src, "plugins/git.jpi", "zip");
+    writeFile(src, "secrets/master.key", "key");
+    const snap = await dockerDirFetcher.snapshot(
+      `jenkins:${src}`,
+      { exclude: "plugins, secrets, jobs/*/builds" },
+      work,
+    );
+    expect(snap).toEqual({
+      file: path.join(work, `${path.basename(src)}.tar`),
+      filename: `${path.basename(src)}.tar`,
+      compress: true,
+    });
+    expect(await dockerDirFetcher.check!(snap.file)).toBe("readable tar, 2 files");
+    const out = tempDir();
+    try {
+      execFileSync("tar", ["-xf", snap.file, "-C", out]);
+      expect(fs.readFileSync(path.join(out, "jobs/deploy/config.xml"), "utf8")).toBe("<project/>");
+      expect(fs.existsSync(path.join(out, "jobs/deploy/builds"))).toBe(false);
+      expect(fs.existsSync(path.join(out, "plugins"))).toBe(false);
+      expect(fs.existsSync(path.join(out, "secrets"))).toBe(false);
+    } finally {
+      cleanup(out);
+    }
+  });
+
+  it("checks the folder exists in the container", async () => {
+    expect(await dockerDirFetcher.inspect(`jenkins:${src}`, {})).toEqual({
+      ok: true,
+      detail: "folder in container jenkins",
+    });
+    expect(await dockerDirFetcher.inspect(`jenkins:${src}/nope`, {})).toEqual({
+      ok: false,
+      detail: `${src}/nope is not a folder in jenkins`,
+    });
+  });
+
+  it("fails when tar fails, and when docker can't be run", async () => {
+    await expect(dockerDirFetcher.snapshot(`jenkins:${src}/nope`, {}, work)).rejects.toThrow(
+      "tar in jenkins failed (exit 2)",
+    );
+    process.env.DOCKER_BIN = path.join(bin, "missing");
+    expect((await dockerDirFetcher.inspect(`jenkins:${src}`, {})).detail).toMatch(/ENOENT/);
+  });
+
+  it("fails the check on a file that isn't a tar", async () => {
+    await expect(dockerDirFetcher.check!(writeFile(src, "junk.tar", "x".repeat(4096)))).rejects.toThrow();
   });
 });
 

@@ -50,7 +50,7 @@ export async function addItemAction(_prev: ActionState, form: FormData): Promise
       path: s("path"),
       fetcher: s("fetcher") || "auto",
       label: s("label") || undefined,
-      options: { pattern: s("pattern") },
+      options: { pattern: s("pattern"), exclude: s("exclude") },
     });
     revalidatePath("/");
     return { ok: `Added ${item.tool}/${item.label} as ${item.fetcher}: ${check}` };

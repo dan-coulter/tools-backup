@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { cleanup, freshDb, tempDir, writeFile } from "@/test/helpers";
+import { cleanup, fakeDocker, freshDb, tempDir, writeFile } from "@/test/helpers";
 
 // S3 is an in-memory map: tests never reach AWS.
 jest.mock("@/lib/s3", () => {
@@ -222,5 +222,27 @@ describe("registerItem", () => {
     );
     const { item } = await m.items.registerItem({ tool: "app", path: missing, fetcher: "file", force: true });
     expect(item.path).toBe(missing);
+  });
+
+  it("keeps container paths as given and names them after the folder", async () => {
+    const bin = tempDir();
+    fakeDocker(bin);
+    try {
+      const { item, check } = await m.items.registerItem({
+        tool: "jenkins",
+        path: `jenkins:${src}`,
+        options: { exclude: "plugins,war" },
+      });
+      expect(item).toMatchObject({
+        fetcher: "docker-dir",
+        path: `jenkins:${src}`,
+        label: path.basename(src),
+        options: '{"exclude":"plugins,war"}',
+      });
+      expect(check).toBe("folder in container jenkins");
+    } finally {
+      delete process.env.DOCKER_BIN;
+      cleanup(bin);
+    }
   });
 });
