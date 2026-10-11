@@ -232,9 +232,9 @@ export function AddItemForm({
           <input name="pattern" placeholder="*.zip" />
         </label>
       )}
-      {fetcher === "docker-dir" && (
+      {(fetcher === "auto" || fetcher === "docker-dir") && (
         <label>
-          <span>Exclude <small>(tar patterns)</small></span>
+          <span>Exclude <small>(container folders only)</small></span>
           <input name="exclude" placeholder="plugins, war, jobs/*/builds" />
         </label>
       )}

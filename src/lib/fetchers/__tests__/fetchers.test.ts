@@ -205,6 +205,11 @@ describe("docker-dir fetcher", () => {
     expect((await dockerDirFetcher.inspect(`jenkins:${src}`, {})).detail).toMatch(/ENOENT/);
   });
 
+  it("rejects, rather than crashing, when the archive can't be written", async () => {
+    writeFile(src, "config.xml", "<hudson/>");
+    await expect(dockerDirFetcher.snapshot(`jenkins:${src}`, {}, path.join(work, "missing"))).rejects.toThrow("ENOENT");
+  });
+
   it("fails the check on a file that isn't a tar", async () => {
     await expect(dockerDirFetcher.check!(writeFile(src, "junk.tar", "x".repeat(4096)))).rejects.toThrow();
   });

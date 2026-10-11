@@ -39,8 +39,14 @@ function run(
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let err = "";
-    if (stdout) child.stdout.pipe(stdout);
-    else child.stdout.on("data", (d) => (out += d));
+    if (stdout) {
+      // A failed write (e.g. disk full) fails this item instead of crashing the run.
+      stdout.on("error", (e) => {
+        child.kill();
+        reject(e);
+      });
+      child.stdout.pipe(stdout);
+    } else child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
     child.on("error", reject);
     child.on("close", (code) => {
