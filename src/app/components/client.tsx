@@ -208,7 +208,7 @@ export function AddItemForm({
         </datalist>
       </label>
       <label className="wide">
-        Path on this server
+        <span>Path on this server <small>(or container:/path)</small></span>
         <input name="path" required placeholder={hint?.pathHint ?? "/path/to/app.db, .env or Backups folder"} />
       </label>
       <label>
@@ -230,6 +230,12 @@ export function AddItemForm({
         <label>
           <span>Pattern <small>(folders only)</small></span>
           <input name="pattern" placeholder="*.zip" />
+        </label>
+      )}
+      {(fetcher === "auto" || fetcher === "docker-dir") && (
+        <label>
+          <span>Exclude <small>(container folders only)</small></span>
+          <input name="exclude" placeholder="plugins, war, jobs/*/builds" />
         </label>
       )}
       <div className="form-foot">

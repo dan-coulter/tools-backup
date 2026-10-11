@@ -20,6 +20,11 @@ Each registered file has a **fetcher** that gets a copy onto local disk:
 | `sqlite`        | live SQLite databases                 | SQLite's online backup API (safe mid-write)        |
 | `file`          | `.env`, `config.json`, settings files | plain copy                                         |
 | `latest-in-dir` | apps that write their own backups     | newest matching file, e.g. Sonarr/Radarr `*.zip`   |
+| `docker-dir`    | state kept as many files in Docker    | `docker exec <container> tar`, minus `--exclude`s  |
+
+`docker-dir` paths are `<container>:/path/in/container`, e.g.
+`jenkins:/var/jenkins_home`. Tar runs inside the container, so it can read
+root-owned files that `dan` can't.
 
 The copy is hashed. If it matches the last upload, nothing is uploaded and the
 run records it as `unchanged`. Otherwise it is gzipped (unless it's already
@@ -42,6 +47,7 @@ write a `Fetcher` in `src/lib/fetchers/` (see `types.ts`), and add it to
 npm run items -- list
 npm run items -- add <tool> <path>                 # type is auto-detected
 npm run items -- add sonarr /home/dan/docker-configs/sonarr/Backups/scheduled --pattern 'sonarr_backup_*.zip' --label "scheduled backups"
+npm run items -- add jenkins jenkins:/var/jenkins_home --label home --exclude plugins --exclude 'jobs/*/builds'
 npm run items -- disable <id> | enable <id> | remove <id>
 npm run items -- verify [<id>...]                  # test restore from S3
 npm run items -- restore <id> [--out ./restore]    # download newest copy
@@ -107,6 +113,33 @@ npm run items -- restore <id> --out /tmp/restore
 Stop the owning app, replace its file with the restored copy (for SQLite,
 delete any stale `-wal`/`-shm` next to it), then start the app. Sonarr/Radarr
 zips are restored from the app's own UI (System → Backup → Restore).
+
+### Jenkins
+
+`jenkins/home` is `/var/jenkins_home` from the `jenkins` container
+(`/home/dan/docker-configs/jenkins` on plex): global config, job definitions,
+users and `credentials.xml`. It leaves out `plugins`, `war`, `workspace`,
+`updates`, `logs`, `.java`, build history (`jobs/*/builds`), `*.log` and
+`*.bak`, which Jenkins re-downloads or doesn't need. Job configs record the
+plugins they use (`plugin="git@…"`); reinstall those from Manage Jenkins →
+Plugins after a restore.
+
+It also leaves out `secrets/` and `.ssh/` on purpose. `secrets/master.key`
+and `secrets/hudson.util.Secret` decrypt `credentials.xml`, so they're kept
+off S3, on a separate backup service. Both were created when Jenkins was first
+set up and don't change, so a one-time copy is enough. Copy them again if a
+new file shows up in `secrets/` after installing a plugin that stores its own
+secrets. `.ssh/` holds the deploy key (see "Deploying").
+
+```bash
+sudo tar czf ~/jenkins-secrets-$(date +%F).tgz -C /home/dan/docker-configs/jenkins secrets .ssh
+```
+
+Put the archive on the other backup service, then delete it from your home
+folder. It can decrypt every Jenkins credential.
+
+To restore, stop the container, extract the S3 copy and the secrets archive
+into `/home/dan/docker-configs/jenkins` (as root), then start it.
 
 ## Tests
 

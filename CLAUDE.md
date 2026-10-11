@@ -14,7 +14,8 @@ cd /opt/tools-backup && npm run -s items -- add <tool-name> <absolute-path>
 
 - `<tool-name>`: lowercase project name (it becomes the S3 folder), e.g. `oscars-db`.
 - The type is auto-detected: SQLite files use the backup API, folders take the newest file
-  (add `--pattern '*.zip'`), anything else is copied. Use `--label` to rename it.
+  (add `--pattern '*.zip'`), anything else is copied. `<container>:/path` tars a folder inside a
+  Docker container (add `--exclude <pattern>`, repeatable). Use `--label` to rename it.
 - Register the **production** path when one exists (e.g. `/var/lib/<tool>/<tool>.db`), not a dev copy.
 - Then run `npm run -s backup -- --tool <tool-name>` once to confirm it uploads.
 - `npm run -s items -- list` shows what's registered.

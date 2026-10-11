@@ -1,3 +1,4 @@
+import { dockerDirFetcher, isContainerPath } from "./docker-dir";
 import { fileFetcher } from "./file";
 import { latestInDirFetcher } from "./latest-in-dir";
 import { sqliteFetcher } from "./sqlite";
@@ -5,7 +6,7 @@ import type { Fetcher } from "./types";
 
 // To support a new way of getting files (ssh, HTTP, docker exec...), write a
 // Fetcher and add it here. The UI, CLI and backup run pick it up automatically.
-export const FETCHERS: Fetcher[] = [sqliteFetcher, fileFetcher, latestInDirFetcher];
+export const FETCHERS: Fetcher[] = [sqliteFetcher, fileFetcher, latestInDirFetcher, dockerDirFetcher];
 
 export function getFetcher(id: string): Fetcher {
   const f = FETCHERS.find((x) => x.id === id);
@@ -17,7 +18,9 @@ export type { Fetcher, Snapshot } from "./types";
 
 // Picks a fetcher from what's at `p`: folders get "newest file", files that
 // start with the SQLite header get the backup API, everything else is copied.
+// "<container>:/path" is a folder inside a Docker container.
 export async function detectFetcher(p: string): Promise<string> {
+  if (isContainerPath(p)) return "docker-dir";
   const fs = await import("node:fs/promises");
   const st = await fs.stat(p);
   if (st.isDirectory()) return "latest-in-dir";

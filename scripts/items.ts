@@ -7,7 +7,7 @@ import { registerItem } from "../src/lib/items";
 
 const USAGE = `Usage:
   npm run items -- list [--tool <tool>]
-  npm run items -- add <tool> <path> [--type auto|${FETCHERS.map((f) => f.id).join("|")}] [--label <name>] [--pattern '*.zip'] [--force]
+  npm run items -- add <tool> <path> [--type auto|${FETCHERS.map((f) => f.id).join("|")}] [--label <name>] [--pattern '*.zip'] [--exclude <pattern>...] [--force]
   npm run items -- remove <id>
   npm run items -- enable <id> | disable <id>
   npm run items -- verify [<id>...]          test-restore the newest copy (all items if none given)
@@ -20,6 +20,7 @@ const { values, positionals } = parseArgs({
     type: { type: "string", default: "auto" },
     label: { type: "string" },
     pattern: { type: "string" },
+    exclude: { type: "string", multiple: true },
     out: { type: "string", default: "restore" },
     force: { type: "boolean", default: false },
   },
@@ -55,7 +56,7 @@ switch (cmd) {
       path: p,
       fetcher: values.type,
       label: values.label,
-      options: values.pattern ? { pattern: values.pattern } : undefined,
+      options: { pattern: values.pattern ?? "", exclude: (values.exclude ?? []).join(",") },
       force: values.force,
     });
     console.log(`Added #${item.id} ${item.tool}/${item.label} (${item.fetcher}): ${check}`);
