@@ -28,4 +28,4 @@ cd /home/dan/claude/tools-backup && npm run -s items -- add <tool-name> <absolut
 - `scripts/`: `backup.ts` and `items.ts` CLIs (run with tsx).
 - `deploy/`: systemd units (run as `dan` from this checkout) and `install.sh`.
 
-`npm run typecheck` before finishing. Dev server is port 4761; production is 4760.
+`npm run check` (typecheck and tests) before finishing; tests import `describe`, `it`, `expect` and `jest` from `@jest/globals`. Dev server is port 4761; production is 4760.
