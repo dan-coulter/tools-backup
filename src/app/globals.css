@@ -104,7 +104,8 @@ dialog.preview pre { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; w
 /* Phones: item tables become stacked cards, runs wrap, bigger tap targets. */
 @media (max-width: 720px) {
   main { padding: 16px 12px 48px; }
-  .tool { padding: 12px; overflow-x: visible; }
+  /* Long unbroken values (paths, keys, errors) wrap instead of widening the page. */
+  .tool { padding: 12px; overflow-x: visible; overflow-wrap: anywhere; }
   .tool-head { flex-wrap: wrap; align-items: center; }
   .tool-head .tool-path { display: none; }
   .top .action, .top .action button { width: 100%; }
@@ -113,7 +114,11 @@ dialog.preview pre { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; w
   button.icon, a.button.icon { padding: 9px 10px; }
 
   table.items, table.items tbody { display: block; min-width: 0; }
-  table.items thead { display: none; }
+  /* Visually hidden, still read by screen readers. */
+  table.items thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
   table.items tr {
     display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 8px;
     padding: 12px 0; border-bottom: 1px solid var(--border);
