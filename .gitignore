@@ -37,3 +37,6 @@ next-env.d.ts
 
 # app data (the database is backed up to S3 by the app itself)
 /data/
+
+# deploys
+/.deploy/

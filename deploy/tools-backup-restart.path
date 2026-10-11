@@ -1,0 +1,12 @@
+# /etc/systemd/system/tools-backup-restart.path
+# deploy/update.sh writes the trigger file after a build; this restarts the
+# web UI, so deploys need no sudo.
+[Unit]
+Description=Restart the tools backup web UI after a deploy
+
+[Path]
+PathChanged=/opt/tools-backup/.deploy/restart
+Unit=tools-backup-restart.service
+
+[Install]
+WantedBy=multi-user.target
