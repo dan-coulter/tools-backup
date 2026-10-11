@@ -49,8 +49,10 @@ function run(
     } else child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
     child.on("error", reject);
-    child.on("close", (code) => {
-      const done = () => resolve({ code: code ?? 1, stdout: out, stderr: err.trim() });
+    child.on("close", (code, signal) => {
+      // Killed (e.g. OOM): the output may be cut short, so never treat it as an exit code.
+      if (code === null) return reject(new Error(`${path.basename(cmd)} was killed by ${signal}`));
+      const done = () => resolve({ code, stdout: out, stderr: err.trim() });
       if (stdout && !stdout.writableFinished) stdout.on("finish", done);
       else done();
     });

@@ -205,6 +205,15 @@ describe("docker-dir fetcher", () => {
     expect((await dockerDirFetcher.inspect(`jenkins:${src}`, {})).detail).toMatch(/ENOENT/);
   });
 
+  it("fails when docker is killed by a signal, even mid-archive", async () => {
+    const killed = path.join(bin, "killed-docker");
+    fs.writeFileSync(killed, "#!/bin/sh\nkill -KILL $$\n", { mode: 0o755 });
+    process.env.DOCKER_BIN = killed;
+    await expect(dockerDirFetcher.snapshot(`jenkins:${src}`, {}, work)).rejects.toThrow(
+      "killed-docker was killed by SIGKILL",
+    );
+  });
+
   it("rejects, rather than crashing, when the archive can't be written", async () => {
     writeFile(src, "config.xml", "<hudson/>");
     await expect(dockerDirFetcher.snapshot(`jenkins:${src}`, {}, path.join(work, "missing"))).rejects.toThrow("ENOENT");
