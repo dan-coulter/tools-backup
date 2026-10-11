@@ -74,3 +74,17 @@ npm run items -- restore <id> --out /tmp/restore
 Stop the owning app, replace its file with the restored copy (for SQLite,
 delete any stale `-wal`/`-shm` next to it), then start the app. Sonarr/Radarr
 zips are restored from the app's own UI (System → Backup → Restore).
+
+## Tests
+
+```bash
+npm test          # Jest
+npm run check     # typecheck, then tests
+```
+
+The tests cover the fetchers, the database (migrations, items, the single run
+slot, backup history) and the backup engine: de-duplication, gzip, S3 key
+names, restore and verify. S3 is replaced by an in-memory fake
+(`src/lib/__tests__/backup.test.ts`), and each test gets its own temporary
+database (`freshDb` in `src/test/helpers.ts`), so they never touch AWS or the
+real `data/tools-backup.db`.
