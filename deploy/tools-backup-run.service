@@ -8,6 +8,6 @@ Wants=network-online.target
 Type=oneshot
 User=dan
 Group=dan
-WorkingDirectory=/home/dan/claude/tools-backup
+WorkingDirectory=/opt/tools-backup
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/local/bin/npm run -s backup -- --trigger schedule

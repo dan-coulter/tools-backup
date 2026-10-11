@@ -9,7 +9,7 @@ Type=simple
 # Runs as you: it has to read every tool's files, wherever they live.
 User=dan
 Group=dan
-WorkingDirectory=/home/dan/claude/tools-backup
+WorkingDirectory=/opt/tools-backup
 Environment=NODE_ENV=production
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 # Bind every interface (LAN and Tailscale). Next reads HOSTNAME, which shells

@@ -1,0 +1,7 @@
+# /etc/systemd/system/tools-backup-restart.service (started by the .path unit)
+[Unit]
+Description=Restart the tools backup web UI after a deploy
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart tools-backup.service

@@ -60,10 +60,43 @@ homepage tile.
 cp .env.example .env.local    # AWS keys + bucket
 npm install
 npm run dev                   # http://plex.local:4761
-sudo bash deploy/install.sh   # production service on :4760 + timers
+sudo bash deploy/install.sh   # production in /opt/tools-backup: UI on :4760 + timers
 ```
 
-Re-run `sudo bash deploy/install.sh` after pulling changes.
+Production lives in `/opt/tools-backup`, with its own `.env.local` and
+`data/tools-backup.db`. The first install copies both from the development
+checkout; after that they're separate, so run the CLI (`npm run items`,
+`npm run backup`) from `/opt/tools-backup`. Re-run `sudo bash deploy/install.sh`
+after changing a unit file.
+
+## Deploying
+
+Merging to `main` deploys: the Jenkins job `tools-backup-deploy`
+(https://jenkins.home.danco.page) checks GitHub every 2 minutes and runs
+`deploy/update.sh` on plex for each new commit. To deploy by hand:
+
+```bash
+bash /opt/tools-backup/deploy/update.sh [<commit>]
+```
+
+It waits for any backup run or restore test to finish, checks out the commit,
+runs `npm ci` and `npm run check`, builds, and restarts the web UI through
+`tools-backup-restart.path` (a root path unit watching
+`/opt/tools-backup/.deploy/restart`), so it needs no sudo. Failing checks or a
+failed build put the previous commit back. The timers pick up the new code on
+their next run. The web UI uses `next start` from the checkout, so it can
+return errors for the minute a deploy takes.
+
+Jenkins runs in Docker, so it SSHes to plex (`dan@172.18.0.1`) with the key
+`/var/jenkins_home/.ssh/tools-backup-deploy`, which `~/.ssh/authorized_keys`
+limits to one command:
+
+```
+restrict,command="/opt/tools-backup/deploy/update.sh" ssh-ed25519 AAAA… jenkins-tools-backup-deploy
+```
+
+The job definition is `deploy/jenkins/tools-backup-deploy.xml`; GitHub access
+is the Jenkins credential `github-code`.
 
 ## Restoring
 
