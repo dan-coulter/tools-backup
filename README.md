@@ -122,7 +122,9 @@ users and `credentials.xml`. It leaves out `plugins`, `war`, `workspace`,
 `updates`, `logs`, `.java`, build history (`jobs/*/builds`), `*.log` and
 `*.bak`, which Jenkins re-downloads or doesn't need. Job configs record the
 plugins they use (`plugin="git@…"`); reinstall those from Manage Jenkins →
-Plugins after a restore.
+Plugins after a restore. Credentials kept in a folder (Folder → Credentials)
+are in that folder's `jobs/<folder>/config.xml`, not `credentials.xml`, and
+come back with it.
 
 It also leaves out `secrets/` and `.ssh/` on purpose. `secrets/master.key`
 and `secrets/hudson.util.Secret` decrypt `credentials.xml`, so they're kept
