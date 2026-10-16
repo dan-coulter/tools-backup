@@ -10,7 +10,8 @@
     "test": "jest",
     "check": "npm run typecheck && npm test",
     "backup": "tsx --env-file-if-exists=.env.local scripts/backup.ts",
-    "items": "tsx --env-file-if-exists=.env.local scripts/items.ts"
+    "items": "tsx --env-file-if-exists=.env.local scripts/items.ts",
+    "audit": "tsx --env-file-if-exists=.env.local scripts/audit.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",

@@ -28,7 +28,8 @@ cd /opt/tools-backup && npm run -s items -- add <tool-name> <absolute-path>
 - `src/lib/fetchers/`: one file per way of getting a file. Register new ones in `index.ts`.
 - `src/lib/backup.ts`: run engine (single run at a time, de-dupe by sha256, gzip, upload), restore, verify.
 - `src/app/`: dashboard (server component) + server actions; `api/status` JSON.
-- `scripts/`: `backup.ts` and `items.ts` CLIs (run with tsx).
+- `scripts/`: `backup.ts`, `items.ts` and `audit.ts` CLIs (run with tsx). The audit logic is in
+  `src/lib/audit.ts`; exclusions in `audit-allowlist.txt`.
 - `deploy/`: systemd units (run as `dan` from `/opt/tools-backup`), `install.sh`, `update.sh` and the
   Jenkins job (`deploy/jenkins/`).
 
