@@ -143,6 +143,34 @@ folder. It can decrypt every Jenkins credential.
 To restore, stop the container, extract the S3 copy and the secrets archive
 into `/home/dan/docker-configs/jenkins` (as root), then start it.
 
+## Nightly audit
+
+`npm run -s audit` (from `/opt/tools-backup`) checks for anything the checklist in
+`~/claude/CLAUDE.md` missed, and exits 1 with a list when it finds something:
+
+1. Every `@name host <sub>.{$DOMAIN}` in `~/claude/caddy/Caddyfile` has a `subdomain:` in the
+   deployed dashboard (`/opt/tools-dashboard/src/lib/services.ts`), and every dashboard
+   subdomain has a Caddy site.
+2. Every `*.db`, `*.sqlite`, `*.sqlite3`, `.env` and `.env.local` under `~/claude`, `~/apps`
+   and `/opt/<tool>` (skipping `node_modules`, `.next`, `.git` and `data/backups`), each
+   `/var/lib/<tool>/*.db`, `/etc/<tool>/env`, and each `EnvironmentFile=` of a service that
+   runs from `/opt` or `/home`, is covered by an enabled item.
+3. Every enabled item had a good backup in the last 48 hours (`--max-age-hours`).
+
+Intentional exclusions (dev copies whose production is registered, regenerated files) go in
+`audit-allowlist.txt`, one per line with a `# reason`. Changes deploy with the rest of the repo.
+
+`deploy/audit-cron.sh` runs it from dan's crontab at 05:15 UTC, after the 04:30 backup, logs
+to `~/logs/tools-backup-audit.log` and reports to an Uptime Kuma push monitor (up when clean,
+down with the first gap). Put the monitor's push URL in `/opt/tools-backup/.env.local`:
+
+```
+AUDIT_PUSH_URL=https://uptime.home.danco.page/api/push/<token>
+```
+
+Give the monitor a heartbeat interval of 90000 seconds (25 hours), so a night with no
+audit raises an alert too.
+
 ## Tests
 
 ```bash

@@ -1,0 +1,17 @@
+# Files and sites the nightly audit (scripts/audit.ts) should not flag. One per line:
+#   <pattern>  # why
+# A pattern is an absolute path (* matches within a folder, ** across folders),
+# caddy:<subdomain> for a Caddy site that stays off the dashboard, or
+# dashboard:<subdomain> for a dashboard link with no Caddy site.
+# Prefer exact paths, so a new file in the same place still shows up.
+
+# Development copies: production is registered (/var/lib/<tool>/ or /opt/tools-backup).
+/home/dan/claude/gmail-migration/data/gmail-migration.db  # dev copy; production is /var/lib/gmail-migration
+/home/dan/claude/movies-api/data/movies.db  # dev copy; production is /var/lib/movies-api
+/home/dan/claude/oscars-db/data/oscars.db  # dev copy; production is /var/lib/oscars-db
+/home/dan/claude/tools-backup/data/tools-backup.db  # dev copy; production is /opt/tools-backup/data
+/home/dan/claude/tools-backup/.env.local  # same keys as /opt/tools-backup/.env.local, which is registered
+
+# Leftovers and regenerated files.
+/opt/gmail-migration/data/gmail-migration.db  # empty pre-/var/lib leftover; the service uses /var/lib/gmail-migration
+/opt/oscars-db/.deploy/env  # written from Jenkins credentials on every deploy (docs/deploy.md)
