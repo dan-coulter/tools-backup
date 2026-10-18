@@ -12,6 +12,12 @@
 /home/dan/claude/tools-backup/data/tools-backup.db  # dev copy; production is /opt/tools-backup/data
 /home/dan/claude/tools-backup/.env.local  # same keys as /opt/tools-backup/.env.local, which is registered
 
+# Message history only, deliberately not backed up.
+/var/lib/push-api/push.db  # sent history; settings are in /var/lib/push-api/config.json, which is registered
+/home/dan/claude/push-api/data/push.db  # dev copy of the above
+/var/lib/push-to-phone/push.db  # sent list only; not worth restoring
+/home/dan/claude/push-to-phone/data/push.db  # dev copy of the above
+
 # Leftovers and regenerated files.
 /opt/gmail-migration/data/gmail-migration.db  # empty pre-/var/lib leftover; the service uses /var/lib/gmail-migration
 /opt/oscars-db/.deploy/env  # written from Jenkins credentials on every deploy (docs/deploy.md)
